@@ -78,7 +78,7 @@ print(f'Plots saved at {output_path}')
 Scripts will output plots similiar to those shown below.
 
 ### Example Tx
-![Example Tx](https://github.com/monti2-philips/Wafer_HeatMap/blob/main/output_examples/R0EQLE%20-%20Tx%20Element%20Peak-Peak___Pk-Pk.png)
+![Example Tx](./output_examples/R0EQLE%20-%20Tx%20Element%20Peak-Peak___Pk-Pk.png)
 
 ### Example Rx
-![Example Rx](https://github.com/monti2-philips/Wafer_HeatMap/blob/main/output_examples/R0EQLE%20-%20Rx%20Element%20Peak-Peak___Pk-Pk.png)
+![Example Rx](./output_examples/R0EQLE%20-%20Rx%20Element%20Peak-Peak___Pk-Pk.png)
