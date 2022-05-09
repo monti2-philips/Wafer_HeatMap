@@ -1,15 +1,44 @@
 # Wafer_HeatMap
 
 Wafer_HeatMap provides tools to create Wafer Level HeatMaps based on the Tx and Rx Peak-Peak results for a wafer.
-
+___
 ## Installation
-Download Repository either from GitHub through a zipped folder or by cloning this repository.
-Next use pip to install the requirements needed.
+Download Repository either from GitHub through a zipped folder or by cloning this repository. If using zipped folder, extract contents into a folder that will be used for following steps.
 
+### Creating Virtual Environment
+If you wish to create a virtual environment to use with this set of scripts, go to the extracted folder in your windows explorer and type "cmd" in the address bar and hit enter.
+
+Once the command prompt is open with the current working directory at the desired folder, run the following command.
+
+```
+C:\PATH\TO\FOLDER> python -m venv env
+```
+
+This will create a virtual environment named "env" in the desired directory location. Once this virtual environment is created, you can activate it by running the following command.
+
+```
+C:\PATH\TO\FOLDER> .\env\Scripts\activate
+```
+
+Once activated, your command prompt line should look like this.
+
+```
+(env) C:\PATH\TO\FOLDER> 
+```
+
+### Installing Requirements
+Use pip to install the requirements needed.
+
+Installing to Global Python Installation
 ```
 pip install -r requirements.txt
 ```
 
+Installing to Virtual Environment
+```
+(env) C:\PATH\TO\FOLDER> pip install -r requirements.txt
+```
+___
 ## Configuration
 The "configuration_app.json" file must be updated with correct input directory. "configuration_app_github.json" has representative path only.
 
@@ -29,11 +58,14 @@ The "configuration_app.json" file must be updated with correct input directory. 
                 ]
 }
 ```
-
+___
 ## Usage
 Currently, the Tx and Rx scripts are set to run only one SFC. A for loop can be added to loop through a list of wafers.
+___
+## Running
 
-Change input value of sfc varaible to run for different wafers. A window will appear after running to determine the output folder for plots to be saved.
+### Before Running
+**Change input value of the "sfc" varaible to run for different wafers.**
 
 Example of "create_wafer_heatmap_Tx_Comparison.py"
 ``` python
@@ -74,6 +106,23 @@ plot_wafers.Plotter_Tx(df_amb, df_hot, output_path, asic_list, sfc).plot_wafers(
 print(f'Plots saved at {output_path}')
 ```
 
+### Running From Command Prompt
+The script can be run from the command prompt or an IDE or choice (VSCode, PyCharm, Spyder, etc.)
+
+To run from the command prompt (either in a virtual environment or global python) use the following commands.
+
+Tx Script
+```
+(env) C:\PATH\TO\FOLDER> python create_wafer_heatmap_Tx_Comparison.py
+```
+
+Rx Script
+```
+(env) C:\PATH\TO\FOLDER> python create_wafer_heatmap_Rx_Comparison_onlyHot.py
+```
+
+A window will appear after running to determine the output folder for plots to be saved.
+___
 ## Output
 Scripts will output plots similiar to those shown below.
 
