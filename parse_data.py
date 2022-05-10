@@ -85,10 +85,14 @@ class Parser():
 
         start_time = time.time()
         # Creates List of Tests
-        test_list = self.create_test_list()
+        test_list_tx = self.create_test_list('Tx')
+        test_list_rx = self.create_test_list('Rx')
         # Parses XML files on hard drive to create dictionary entries for each test
-        df_amb = self.create_data_dict(list_amb, test_list, 'Baseline')
-        df_hot = self.create_data_dict(list_hot, test_list, 'Elevated')
+        df_amb = self.create_data_dict(
+            list_amb, test_list_tx, 'Baseline', 'Tx')
+        df_hot = self.create_data_dict(
+            list_hot, test_list_tx, 'Elevated', 'Tx')
+        df_rx = self.create_data_dict(list_hot, test_list_rx, 'Elevated', 'Rx')
         self.keys_match(df_amb, df_hot)
         print('Data Parsing took {0:.0f} seconds.'.format(
             time.time() - start_time))
@@ -104,7 +108,7 @@ class Parser():
         print('Total Time: {0:.0f} minutes and {1:.0f} seconds'.format(
             duration//60, duration % 60))
 
-        return df_amb, df_hot
+        return df_amb, df_hot, df_rx
 
     def check_sfc(self):
         file_list = self.collect_files(self.location, self.sfc)
@@ -327,7 +331,7 @@ class Parser():
         datetime_object = datetime.strptime(string, '%m%d%Y %H%M%S')
         return datetime_object
 
-    def create_test_list(self):
+    def create_test_list(self, tx_rx):
         '''
         Creates list of 17 tests.
 
@@ -337,12 +341,13 @@ class Parser():
             List of [Test, Measurement]
 
         '''
-        print('Please use Parser_Tx or Parser_Rx')
-        sys.exit(1)
+        test_list = []
+        final_test = [f'{tx_rx} Element Peak-Peak', 'Pk-Pk']
+        test_list.append(final_test)
 
-        return
+        return test_list
 
-    def create_data_dict(self, list_of_data_files, list_of_tests, AMB_or_HOT):
+    def create_data_dict(self, list_of_data_files, list_of_tests, AMB_or_HOT, tx_rx):
         '''
         Creates Dictionary of {Test:DataFrame} for each Test.
 
@@ -364,14 +369,14 @@ class Parser():
         df_dict = {}
 
         for test in list_of_tests:
-            df = self.parse_xml_all(list_of_data_files, test)
+            df = self.parse_xml_all(list_of_data_files, test, tx_rx)
             df.reset_index(drop=True)
             df_dict[test[0]+'___'+test[1]] = df
 
             print('{} added to {} DataFrame.'.format(test, AMB_or_HOT))
         return df_dict
 
-    def parse_xml_all(self, file_list, test):
+    def parse_xml_all(self, file_list, test, tx_rx):
         '''
         Function to loop through test result file (XML) and gather needed data for the given test.
 
@@ -386,10 +391,56 @@ class Parser():
             DataFrame with Prober Row_Column as index and numeric test data set to float.
 
         '''
-        print('Please use Parser_Tx or Parser_Rx')
-        sys.exit(1)
+        i = 1
+        for f in file_list:
+            tree = ET.parse(f)
+            root = tree.getroot()
 
-        return
+            temp = {}
+
+            for child in root.findall('./Setup'):
+                temp['Timestamp'] = child.find('Timestamp').text
+                temp['ReportRevision'] = child.find('ReportRevision').text
+                temp['Operator'] = child.find('Operator').text
+                temp['Equipment'] = child.find('Equipment').text
+                temp['PlatformTestSW'] = child.find('PlatformTestSW').text
+                temp['ProductTestSW'] = child.find('ProductTestSW').text
+                temp['Product'] = child.find('Product').text
+                temp['ProcessStep'] = child.find('ProcessStep').text
+                temp['LotNumber'] = child.find('LotNumber').text
+                temp['ProductSN'] = child.find('ProductSN').text
+
+            for child in root.findall('./Summary'):
+                temp['OverallResult'] = child.find('OverallResult').text
+
+            for child in root.findall('./Detail/Entry[Name="'+test[0]+'"]/Group[Measurement="'+test[1]+'"]/..'):
+                temp['TestResult'] = child.find('Result').text
+
+            for child in root.findall('./Detail/Entry[Name="'+test[0]+'"]/Group[Measurement="'+test[1]+'"]/Record/Value'):
+                temp[child.attrib['Record']] = child.text
+
+            # Constructing DataFrame
+            if i == 1:
+                temp1 = pd.DataFrame.from_dict(temp, orient='index', columns=[
+                                               root.find('./Setup/ProductSN').text])
+                result = temp1
+            elif i == 2:
+                temp2 = pd.DataFrame.from_dict(temp, orient='index', columns=[
+                                               root.find('./Setup/ProductSN').text])
+                result = pd.concat([temp1, temp2], axis=1)
+            else:
+                temp2 = pd.DataFrame.from_dict(temp, orient='index', columns=[
+                                               root.find('./Setup/ProductSN').text])
+                result = pd.concat([result, temp2], axis=1)
+
+            # print('{}/{} has been parsed.'.format(i,len(file_list)))
+
+            i += 1
+
+        results = result.T
+        results.iloc[:, results.columns.get_loc(
+            f'{tx_rx} Element[0]'):] = results.iloc[:, results.columns.get_loc(f'{tx_rx} Element[0]'):].astype('float')
+        return results
 
     def keys_match(self, df_amb, df_hot):
         '''
@@ -414,265 +465,6 @@ class Parser():
         '''
         if df_amb.keys() != df_hot.keys():
             raise KeyError('Keys between Baseline and Elevated do not match')
-
-
-class Parser_Tx(Parser):
-    def create_test_list(self):
-        '''
-        Creates list of 17 tests.
-
-        Returns
-        -------
-        test_list : List of Lists
-            List of [Test, Measurement]
-
-        '''
-        test_list = []
-        final_test = ['Tx Element Peak-Peak', 'Pk-Pk']
-        test_list.append(final_test)
-
-        return test_list
-
-    def parse_xml_all(self, file_list, test):
-        '''
-        Function to loop through test result file (XML) and gather needed data for the given test.
-
-        Parameters
-        ----------
-        file_list : List of Paths
-        test : List of Test and Measurement
-
-        Returns
-        -------
-        results : DataFrame
-            DataFrame with Prober Row_Column as index and numeric test data set to float.
-
-        '''
-        i = 1
-        for f in file_list:
-            tree = ET.parse(f)
-            root = tree.getroot()
-
-            temp = {}
-
-            for child in root.findall('./Setup'):
-                temp['Timestamp'] = child.find('Timestamp').text
-                temp['ReportRevision'] = child.find('ReportRevision').text
-                temp['Operator'] = child.find('Operator').text
-                temp['Equipment'] = child.find('Equipment').text
-                temp['PlatformTestSW'] = child.find('PlatformTestSW').text
-                temp['ProductTestSW'] = child.find('ProductTestSW').text
-                temp['Product'] = child.find('Product').text
-                temp['ProcessStep'] = child.find('ProcessStep').text
-                temp['LotNumber'] = child.find('LotNumber').text
-                temp['ProductSN'] = child.find('ProductSN').text
-
-            for child in root.findall('./Summary'):
-                temp['OverallResult'] = child.find('OverallResult').text
-
-            for child in root.findall('./Detail/Entry[Name="'+test[0]+'"]/Group[Measurement="'+test[1]+'"]/..'):
-                temp['TestResult'] = child.find('Result').text
-
-            for child in root.findall('./Detail/Entry[Name="'+test[0]+'"]/Group[Measurement="'+test[1]+'"]/Record/Value'):
-                temp[child.attrib['Record']] = child.text
-
-            # Constructing DataFrame
-            if i == 1:
-                temp1 = pd.DataFrame.from_dict(temp, orient='index', columns=[
-                                               root.find('./Setup/ProductSN').text])
-                result = temp1
-            elif i == 2:
-                temp2 = pd.DataFrame.from_dict(temp, orient='index', columns=[
-                                               root.find('./Setup/ProductSN').text])
-                result = pd.concat([temp1, temp2], axis=1)
-            else:
-                temp2 = pd.DataFrame.from_dict(temp, orient='index', columns=[
-                                               root.find('./Setup/ProductSN').text])
-                result = pd.concat([result, temp2], axis=1)
-
-            # print('{}/{} has been parsed.'.format(i,len(file_list)))
-
-            i += 1
-
-        results = result.T
-        results.iloc[:, results.columns.get_loc(
-            'Tx Element[0]'):] = results.iloc[:, results.columns.get_loc('Tx Element[0]'):].astype('float')
-        return results
-
-class Parser_Rx(Parser):
-    def process_data(self):
-        '''
-        Function used to:
-            1) Call Main 'Process_Data' Function to begin data analysis
-            2) Writes DataCon text to DataCon Group TextBrowser
-
-        Parameters
-        ----------
-        location : Path
-            Input Directory to find Test Data XML files
-        asic_list : List
-            List of ASIC from configuration file
-        sfc : String
-            SFC - 6 characters
-
-        Returns
-        -------
-        df_amb : DataFrame
-            DataFrame of Baseline Results
-        df_hot : DataFrame
-            DataFrame of Elevated Results
-
-        '''
-        start_start = time.time()
-        self.check_sfc()
-
-        start_time = time.time()
-        # Collect Files at Input Directory
-        file_list = self.collect_files(self.location, self.sfc)
-        print('File Collection took {0:.0f} seconds.'.format(
-            time.time() - start_time))
-
-        start_time = time.time()
-        # Sort Files into Elevated and Baseline Lists
-        list_amb, list_hot = self.sort_files(file_list)
-        print('File Sort took {0:.0f} seconds.'.format(
-            time.time() - start_time))
-        print(f'Found {len(list_amb)} Baseline Test Data files.')
-        print(f'Found {len(list_hot)} Elevated Test Data files.')
-
-        # Check Dataset --> Do all  ASIC (that are used) datasets exist for both elevated and baseline?
-        data_check, list_amb, list_hot, asic_list_len, count_in_amb, count_in_hot = self.check_dataset(self.asic_list,
-                                                                                                       list_amb, list_hot)
-        if data_check == False:
-            print(f'Results were not found for {asic_list_len} ASICs of Baseline and Elevated Tests.\
-                    \nBaseline Files: {count_in_amb}\
-                    \nElevated Files: {count_in_hot}\
-                    \nPlease contact Engineering for support.')
-            sys.exit(1)
-
-        print(
-            f'Found {len(list_amb)} Baseline Test Data files that match ASIC List.')
-        print(
-            f'Found {len(list_hot)} Elevated Test Data files that match ASIC List.')
-
-        # Checks for Temp Folder
-        path = self.check_temp_folder()
-
-        start_time = time.time()
-        # Copies files in Amb and Elevated Lists to Temp Folder on Hard Drive
-        # self.copy_files(list_amb, path, 'Baseline')
-        self.copy_files(list_hot, path, 'Elevated')
-        print('File Copy took {0:.0f} seconds.'.format(
-            time.time() - start_time))
-
-        # Collects file paths for Temp Folder Files and resorts int Amb and Elevated Lists
-        list_amb, list_hot = self.collect_copy_files(path)
-
-        start_time = time.time()
-        # Creates List of Tests
-        test_list = self.create_test_list()
-        # Parses XML files on hard drive to create dictionary entries for each test
-        # df_amb = self.create_data_dict(list_amb, test_list, 'Baseline')
-        df_hot = self.create_data_dict(list_hot, test_list, 'Elevated')
-        # self.keys_match(df_amb, df_hot)
-        print('Data Parsing took {0:.0f} seconds.'.format(
-            time.time() - start_time))
-
-        start_time = time.time()
-        # Deletes Temp Folder and all files within
-        self.delete_files(path)
-        print('Deleting Files took {0:.0f} seconds.'.format(
-            time.time() - start_time))
-
-        end_end = time.time()
-        duration = end_end-start_start
-        print('Total Time: {0:.0f} minutes and {1:.0f} seconds'.format(
-            duration//60, duration % 60))
-
-        return df_hot
-    
-    
-    def create_test_list(self):
-        '''
-        Creates list of 17 tests.
-
-        Returns
-        -------
-        test_list : List of Lists
-            List of [Test, Measurement]
-
-        '''
-        test_list = []
-        final_test = ['Rx Element Peak-Peak', 'Pk-Pk']
-        test_list.append(final_test)
-
-        return test_list
-
-    def parse_xml_all(self, file_list, test):
-        '''
-        Function to loop through test result file (XML) and gather needed data for the given test.
-
-        Parameters
-        ----------
-        file_list : List of Paths
-        test : List of Test and Measurement
-
-        Returns
-        -------
-        results : DataFrame
-            DataFrame with Prober Row_Column as index and numeric test data set to float.
-
-        '''
-        i = 1
-        for f in file_list:
-            tree = ET.parse(f)
-            root = tree.getroot()
-
-            temp = {}
-
-            for child in root.findall('./Setup'):
-                temp['Timestamp'] = child.find('Timestamp').text
-                temp['ReportRevision'] = child.find('ReportRevision').text
-                temp['Operator'] = child.find('Operator').text
-                temp['Equipment'] = child.find('Equipment').text
-                temp['PlatformTestSW'] = child.find('PlatformTestSW').text
-                temp['ProductTestSW'] = child.find('ProductTestSW').text
-                temp['Product'] = child.find('Product').text
-                temp['ProcessStep'] = child.find('ProcessStep').text
-                temp['LotNumber'] = child.find('LotNumber').text
-                temp['ProductSN'] = child.find('ProductSN').text
-
-            for child in root.findall('./Summary'):
-                temp['OverallResult'] = child.find('OverallResult').text
-
-            for child in root.findall('./Detail/Entry[Name="'+test[0]+'"]/Group[Measurement="'+test[1]+'"]/..'):
-                temp['TestResult'] = child.find('Result').text
-
-            for child in root.findall('./Detail/Entry[Name="'+test[0]+'"]/Group[Measurement="'+test[1]+'"]/Record/Value'):
-                temp[child.attrib['Record']] = child.text
-
-            # Constructing DataFrame
-            if i == 1:
-                temp1 = pd.DataFrame.from_dict(temp, orient='index', columns=[
-                                               root.find('./Setup/ProductSN').text])
-                result = temp1
-            elif i == 2:
-                temp2 = pd.DataFrame.from_dict(temp, orient='index', columns=[
-                                               root.find('./Setup/ProductSN').text])
-                result = pd.concat([temp1, temp2], axis=1)
-            else:
-                temp2 = pd.DataFrame.from_dict(temp, orient='index', columns=[
-                                               root.find('./Setup/ProductSN').text])
-                result = pd.concat([result, temp2], axis=1)
-
-            # print('{}/{} has been parsed.'.format(i,len(file_list)))
-
-            i += 1
-
-        results = result.T
-        results.iloc[:, results.columns.get_loc(
-            'Rx Element[0]'):] = results.iloc[:, results.columns.get_loc('Rx Element[0]'):].astype('float')
-        return results
 
 
 if __name__ == '__main__':
