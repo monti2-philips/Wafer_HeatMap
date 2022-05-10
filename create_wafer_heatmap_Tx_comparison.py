@@ -1,15 +1,17 @@
 # Import Libraries, Input Directory, ASIC List
 import json
 import os
+from tkinter import *
+from tkinter import filedialog
+
 import parse_data
 import plot_wafers
-from tkinter import filedialog
-from tkinter import *
 
 # Ask for directory to store HeatMap output
 root = Tk()
 root.withdraw()
-output_path = filedialog.askdirectory(mustexist=True)
+output_path = filedialog.askdirectory(
+    title="Select Save Location", mustexist=True)
 
 # TODO Add section for input SFC, maybe CLI arguments for this
 # Input SFC
@@ -30,7 +32,9 @@ location = os.path.abspath(js["input_directory"])
 asic_list = js["asic_list"]
 
 # Run Parser_Tx then Plotter_Tx
-df_amb, df_hot = parse_data.Parser_Tx(location, asic_list, sfc).process_data()
-plot_wafers.Plotter_Tx(df_amb, df_hot, output_path, asic_list, sfc).plot_wafers()
+df_amb, df_hot, df_rx = parse_data.Parser(
+    location, asic_list, sfc).process_data()
+plot_wafers.Plotter_Tx(df_amb, df_hot, output_path,
+                       asic_list, sfc).plot_wafers()
 
 print(f'Plots saved at {output_path}')

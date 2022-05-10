@@ -30,7 +30,9 @@ location = os.path.abspath(js["input_directory"])
 asic_list = js["asic_list"]
 
 # Run Parser_Rx then Plotter_Rx
-df_hot = parse_data.Parser_Rx(location, asic_list, sfc).process_data()
-plot_wafers.Plotter_Rx(df_hot, output_path, asic_list, sfc).plot_wafers()
+df_amb, df_hot, df_rx = parse_data.Parser(
+    location, asic_list, sfc).process_data()
+plot_wafers.Plotter_Rx(df_rx, output_path,
+                       asic_list, sfc).plot_wafers()
 
 print(f'Plots saved at {output_path}')
