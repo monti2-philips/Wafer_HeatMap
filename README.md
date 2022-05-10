@@ -1,6 +1,6 @@
 # Wafer_HeatMap
 
-Wafer_HeatMap provides tools to create Wafer Level HeatMaps based on the Tx and Rx Peak-Peak results for a wafer.
+Wafer_HeatMap provides tools to create Wafer Level Heat Maps based on the Tx and Rx Peak-Peak results for a wafer.
 ___
 ## Installation
 Download Repository either from GitHub through a zipped folder or by cloning this repository. If using zipped folder, extract contents into a folder that will be used for following steps.
@@ -60,28 +60,36 @@ The "configuration_app.json" file must be updated with correct input directory. 
 ```
 ___
 ## Usage
-Currently, the Tx and Rx scripts are set to run only one SFC. A for loop can be added to loop through a list of wafers.
+Three scripts are currently available:
+- create_wafer_heatmap_comparison.py - Plots Tx and Rx for SFC
+- create_wafer_heatmap_Tx_comparison.py - Plots only Tx for SFC
+- create_wafer_heatmap_Rx_comparison.py - Plots only Rx for SFC
+  
+Currently, the scripts are set to run only one SFC. A for loop can be implemented to loop through a list of wafers.
 ___
 ## Running
 
 ### Before Running
 **Change input value of the "sfc" varaible to run for different wafers.**
 
-Example of "create_wafer_heatmap_Tx_Comparison.py"
+Example of "create_wafer_heatmap_comparison.py"
 ``` python
 # Import Libraries, Input Directory, ASIC List
 import json
 import os
+from tkinter import *
+from tkinter import filedialog
+
 import parse_data
 import plot_wafers
-from tkinter import filedialog
-from tkinter import *
 
 # Ask for directory to store HeatMap output
 root = Tk()
 root.withdraw()
-output_path = filedialog.askdirectory(mustexist=True)
+output_path = filedialog.askdirectory(
+    title="Select Save Location", mustexist=True)
 
+# TODO Add section for input SFC, maybe CLI arguments for this
 # Input SFC
 sfc = 'R0EQLE'
 
@@ -100,8 +108,12 @@ location = os.path.abspath(js["input_directory"])
 asic_list = js["asic_list"]
 
 # Run Parser_Tx then Plotter_Tx
-df_amb, df_hot = parse_data.Parser_Tx(location, asic_list, sfc).process_data()
-plot_wafers.Plotter_Tx(df_amb, df_hot, output_path, asic_list, sfc).plot_wafers()
+df_amb, df_hot, df_rx = parse_data.Parser(
+    location, asic_list, sfc).process_data()
+plot_wafers.Plotter_Tx(df_amb, df_hot, output_path,
+                       asic_list, sfc).plot_wafers()
+plot_wafers.Plotter_Rx(df_rx, output_path,
+                       asic_list, sfc).plot_wafers()
 
 print(f'Plots saved at {output_path}')
 ```
@@ -111,14 +123,19 @@ The script can be run from the command prompt or an IDE or choice (VSCode, PyCha
 
 To run from the command prompt (either in a virtual environment or global python) use the following commands.
 
+Combined Script
+```
+(env) C:\PATH\TO\FOLDER> python create_wafer_heatmap_comparison.py
+```
+
 Tx Script
 ```
-(env) C:\PATH\TO\FOLDER> python create_wafer_heatmap_Tx_Comparison.py
+(env) C:\PATH\TO\FOLDER> python create_wafer_heatmap_Tx_comparison.py
 ```
 
 Rx Script
 ```
-(env) C:\PATH\TO\FOLDER> python create_wafer_heatmap_Rx_Comparison_onlyHot.py
+(env) C:\PATH\TO\FOLDER> python create_wafer_heatmap_Rx_comparison.py
 ```
 
 A window will appear after running to determine the output folder for plots to be saved.
