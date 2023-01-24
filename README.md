@@ -119,7 +119,7 @@ print(f'Plots saved at {output_path}')
 ```
 
 ### Running From Command Prompt
-The script can be run from the command prompt or an IDE or choice (VSCode, PyCharm, Spyder, etc.)
+The script can be run from the command prompt or an IDE of choice (VSCode, PyCharm, Spyder, etc.)
 
 To run from the command prompt (either in a virtual environment or global python) use the following commands.
 
